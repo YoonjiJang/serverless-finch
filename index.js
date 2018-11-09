@@ -8,7 +8,6 @@ const BbPromise = require('bluebird');
 const Confirm = require('prompt-confirm');
 
 const bucketUtils = require('./lib/bucketUtils');
-const configure = require('./lib/configure');
 const regionUrls = require('./lib/resources/awsRegionUrls');
 const uploadDirectory = require('./lib/upload');
 const validateClient = require('./lib/validate');
@@ -62,10 +61,12 @@ class Client {
 
   _removeDeployedResources() {
     let bucketName;
+    let basePath;
 
     return this._validateConfig()
       .then(() => {
         bucketName = this.options.bucketName;
+        basePath = this.options.basePath || '';
         return this.cliOptions.confirm === false
           ? true
           : new Confirm(`Are you sure you want to delete bucket '${bucketName}'?`).run();
@@ -77,7 +78,7 @@ class Client {
             if (exists) {
               this.serverless.cli.log(`Deleting all objects from bucket...`);
               return bucketUtils
-                .emptyBucket(this.aws, bucketName)
+                .emptyBucket(this.aws, bucketName, basePath)
                 .then(() => {
                   this.serverless.cli.log(`Removing bucket...`);
                   return bucketUtils.deleteBucket(this.aws, bucketName);
@@ -107,10 +108,7 @@ class Client {
       bucketName,
       headerSpec,
       orderSpec,
-      indexDoc,
-      errorDoc,
-      redirectAllRequestsTo,
-      routingRules;
+      basePath;
 
     return this._validateConfig()
       .then(() => {
@@ -129,10 +127,7 @@ class Client {
         bucketName = this.options.bucketName;
         headerSpec = this.options.objectHeaders;
         orderSpec = this.options.uploadOrder;
-        indexDoc = this.options.indexDocument || 'index.html';
-        errorDoc = this.options.errorDocument || 'error.html';
-        redirectAllRequestsTo = this.options.redirectAllRequestsTo || null;
-        routingRules = this.options.routingRules || null;
+        basePath = this.options.basePath || '';
 
         const deployDescribe = ['This deployment will:'];
 
@@ -142,15 +137,6 @@ class Client {
         deployDescribe.push(
           `- Upload all files from '${distributionFolder}' to bucket '${bucketName}'`
         );
-        if (this.cliOptions['config-change'] !== false) {
-          deployDescribe.push(`- Set (and overwrite) bucket '${bucketName}' configuration`);
-        }
-        if (this.cliOptions['policy-change'] !== false) {
-          deployDescribe.push(`- Set (and overwrite) bucket '${bucketName}' bucket policy`);
-        }
-        if (this.cliOptions['cors-change'] !== false) {
-          deployDescribe.push(`- Set (and overwrite) bucket '${bucketName}' CORS policy`);
-        }
 
         deployDescribe.forEach(m => this.serverless.cli.log(m));
         return this.cliOptions.confirm === false
@@ -171,54 +157,21 @@ class Client {
                 }
 
                 this.serverless.cli.log(`Deleting all objects from bucket...`);
-                return bucketUtils.emptyBucket(this.aws, bucketName);
+                return bucketUtils.emptyBucket(this.aws, bucketName, basePath);
               } else {
                 this.serverless.cli.log(`Bucket does not exist. Creating bucket...`);
                 return bucketUtils.createBucket(this.aws, bucketName);
               }
             })
             .then(() => {
-              if (this.cliOptions['config-change'] === false) {
-                this.serverless.cli.log(`Retaining existing bucket configuration...`);
-                return BbPromise.resolve();
-              }
-              this.serverless.cli.log(`Configuring bucket...`);
-              return configure.configureBucket(
-                this.aws,
-                bucketName,
-                indexDoc,
-                errorDoc,
-                redirectAllRequestsTo,
-                routingRules
-              );
-            })
-            .then(() => {
-              if (this.cliOptions['policy-change'] === false) {
-                this.serverless.cli.log(`Retaining existing bucket policy...`);
-                return BbPromise.resolve();
-              }
-              this.serverless.cli.log(`Configuring policy for bucket...`);
-              const bucketPolicyFile = this.serverless.service.custom.client.bucketPolicyFile;
-              const customPolicy = bucketPolicyFile && JSON.parse(fs.readFileSync(bucketPolicyFile));
-              return configure.configurePolicyForBucket(this.aws, bucketName, customPolicy);
-            })
-            .then(() => {
-              if (this.cliOptions['cors-change'] === false) {
-                this.serverless.cli.log(`Retaining existing bucket CORS configuration...`);
-                return BbPromise.resolve();
-              }
-              this.serverless.cli.log(`Configuring CORS for bucket...`);
-              return configure.configureCorsForBucket(this.aws, bucketName);
-            })
-            .then(() => {
               this.serverless.cli.log(`Uploading client files to bucket...`);
-              return uploadDirectory(this.aws, bucketName, clientPath, headerSpec, orderSpec);
+              return uploadDirectory(this.aws, bucketName, clientPath, headerSpec, orderSpec, basePath);
             })
             .then(() => {
               this.serverless.cli.log(
                 `Success! Your site should be available at http://${bucketName}.${
                   regionUrls[region]
-                }/`
+                }/${basePath}`
               );
             });
         }

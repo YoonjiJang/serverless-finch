@@ -92,53 +92,7 @@ Use this parameter to specify the path that contains your website files to be up
 
 ---
 
-**indexDocument**
-
-_optional_, default: `index.html`
-
-```yaml
-custom:
-  client:
-    ...
-    indexDocument: [file-name.ext]
-    ...
-```
-
-The name of your index document inside your `distributionFolder`. This is the file that will be served to a client visiting the base URL for your website.
-
----
-
-**errorDocument**
-
-_optional_, default: `error.html`
-
-```yaml
-custom:
-  client:
-    ...
-    errorDocument: [file-name.ext]
-    ...
-```
-
-The name of your error document inside your `distributionFolder`. This is the file that will be served to a client if their initial request returns an error (e.g. 404). For an SPA, you may want to set this to the same document specified in `indexDocument` so that all requests are redirected to your index document and routing can be handled on the client side by your SPA.
-
----
-
-**bucketPolicyFile**
-
-```yaml
-custom:
-  client:
-    ...
-    bucketPolicyFile: [path/to/policy.json]
-    ...
-```
-
-Use this parameter to specify the path to a custom policy file. If not set, it defaults to a config for a basic static website. Currently, only JSON is supported. In your policy, make sure that your resource has the correct bucket name specified above: `"Resource": "arn:aws:s3:::BUCKET_NAME/*",`
-
----
-
-**objectHeaders** 
+**objectHeaders**
 
 _optional_, no default
 
@@ -167,74 +121,11 @@ custom:
     ...
 ```
 
-Use the `objectHeaders` option to set HTTP response headers be sent to clients requesting uploaded files from your website. 
+Use the `objectHeaders` option to set HTTP response headers be sent to clients requesting uploaded files from your website.
 
-Headers may be specified globally for all files in the bucket by adding a `name`, `value` pair to the `ALL_OBJECTS` property of the `objectHeaders` option. They may also be specified for specific folders or files within your site by specifying properties with names like `specific-directory/` (trailing slash required to indicate folder) or `specific-file.ext`, where the folder and/or file paths are relative to `distributionFolder`. 
+Headers may be specified globally for all files in the bucket by adding a `name`, `value` pair to the `ALL_OBJECTS` property of the `objectHeaders` option. They may also be specified for specific folders or files within your site by specifying properties with names like `specific-directory/` (trailing slash required to indicate folder) or `specific-file.ext`, where the folder and/or file paths are relative to `distributionFolder`.
 
 Headers with more specificity will take precedence over more general ones. For instance, if 'Cache-Control' was set to 'max-age=100' in `ALL_OBJECTS` and to 'max-age=500' in `my/folder/`, the files in `my/folder/` would get a header of 'Cache-Control: max-age=500'.
-
----
-
-**redirectAllRequestsTo**
-
-_optional_, no default
-
-```yaml
-custom:
-  client:
-    ...
-    redirectAllRequestsTo:
-      hostName: [hostName]
-      protocol: [http|https]
-    ...
-```
-
-Use the `redirectAllRequestsTo` option if you want to route all traffic coming to your website to a different address. `hostName` is the address that requests should be redirected to (e.g. 'www.other-website.com'). `protocol` is the protocol to use for the redirect and must be either 'http' or 'https'.
-
-[AWS Documentation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-websiteconfiguration.html#cfn-s3-websiteconfiguration-redirectallrequeststo)
-
----
-
-**routingRules**
-
-_optional_, no default
-
-```yaml
-custom:
-  client:
-    ...
-    routingRules:
-      - redirect:
-          hostName: [hostName]
-          httpRedirectCode: [CODE]
-          protocol: [http|https]
-          replaceKeyPrefixWith: [prefix]
-          replaceKeyWith: [object]
-        condition:
-          keyPrefixEquals: [prefix]
-          httpErrorCodeReturnedEquals: [CODE]
-      - [more-rules...]
-    ...
-```
-
-The `routingRules` option can be used to define rules for when and how certain requests to your site should be redirected. Each rule in the `redirectRules` list consists of a (required) `redirect` definition and (optionally) a `condition` on which the redirect is applied.
-
-The `redirect` property of each rule has five optional parameters:
-
-* `hostName` is the name of the host that the request should be redirected to (e.g. 'www.other-site.com'). Defaults to the host from the original request.
-* `httpRedirectCode` is the HTTP status code to use for the redirect (e.g. 301, 303, 308).
-* `protocol` is the protocol to use for the redirect and must be 'http' or 'https'. Defaults to the protocol from the original request.
-* `replaceKeyPrefixWith` specifies the string to replace the portion of the route specified in the `keyPrefixEquals` with in the redirect. For instance, if you want to redirect requests for pages starting with '/images' to pages starting with '/assets/images', you can specify `keyPrefixEquals` as '/images' and `replaceKeyPrefixWith` as '/assets/images'. _Cannot be specified along with `replaceKeyWith`_.
-* `replaceKeyWith` specifies a specific page to redirect requests to (e.g. 'landing.html'). _Cannot be specified along with `replaceKeyPrefixWith`_.
-
-The `condition` property has two optional parameters:
-
-* `keyPrefixEquals` specifies that requests to pages starting with the specified value should be redirected. Often used with the `replaceKeyPrefixWith` and `replaceKeyWith` `redirect` properties.
-* `httpErrorCodeReturnedEquals` specifies that requests resulting in the given HTTP error code (e.g. 404, 500) should be redirected.
-
-_If `condition` is not specified, then all requests will be redirected in accordance with the specified `redirect` properties_
-
-[AWS Documentation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-websiteconfiguration.html#cfn-s3-websiteconfiguration-routingrules)
 
 ---
 
@@ -266,11 +157,11 @@ _optional_, defaults to value specified in `provider` section of `serverless.yml
 serverless client deploy --region $REGION
 ```
 
-Use this parameter to specify what AWS region your bucket will be deployed in. 
+Use this parameter to specify what AWS region your bucket will be deployed in.
 
 This option will always determine the deployment region if specified. If `region`
-is not specified via the CLI, we use the `region` option specified under 
-custom/client in `serverless.yml`. If that is not specified, we use the Serverless 
+is not specified via the CLI, we use the `region` option specified under
+custom/client in `serverless.yml`. If that is not specified, we use the Serverless
 region specified under `provider` in `serverless.yml`.
 
 ---
@@ -284,42 +175,6 @@ serverless client deploy --no-delete-contents
 ```
 
 Use this parameter if you do not want to delete the contents of your bucket before deployment. Files uploaded during deployment will still replace any corresponding files already in your bucket.
-
----
-
-**--no-config-change**
-
-_optional_, default `false` (overwrites bucket configuration by default)
-
-```bash
-serverless client deploy --no-config-change
-```
-
-Use this parameter if you do not want to overwrite the bucket configuration when deploying to your bucket.
-
----
-
-**--no-policy-change**
-
-_optional_, default `false` (overwrites bucket policy by default)
-
-```bash
-serverless client deploy --no-policy-change
-```
-
-Use this parameter if you do not want to overwrite the bucket policy when deploying to your bucket.
-
----
-
-**--no-cors-change**
-
-_optional_, default `false` (overwrites bucket CORS configuration by default)
-
-```bash
-serverless client deploy --no-cors-change
-```
-
-Use this parameter if you do not want to overwrite the bucket CORS configuration when deploying to your bucket.
 
 ---
 
@@ -337,11 +192,11 @@ Use this parameter if you do not want a confirmation prompt to interrupt automat
 
 ## Contributing
 
-For guidelines on contributing to the project, please refer to our [Contributing](docs/CONTRIBUTING.md) page. 
+For guidelines on contributing to the project, please refer to our [Contributing](docs/CONTRIBUTING.md) page.
 
 ## Release Notes
 
-### v2.0.\* 
+### v2.0.\*
 - Added ability to deploy files in a specific order to maximize uptime - [Issue 63](https://github.com/fernando-mc/serverless-finch/issues/63) - [stefan-lz](https://github.com/stefan-lz)
 - Added Python tests of functionality to speed up development - [fernando-mc](https://github.com/fernando-mc)
 - Major refactor of entire codebase to move towards modularity and testability
@@ -352,7 +207,7 @@ For guidelines on contributing to the project, please refer to our [Contributing
   + Bucket configuration being overwritten on deployment
   + Bucket policy being overwritten on deployment
   + Bucket CORS configuration being overwritten on deployment
-- Added validation checks for all configuration options 
+- Added validation checks for all configuration options
 - Removed "stage" command-line option. It was not being used for anything
 
 ### v1.4.\*
